@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Agree",
+  "version": "1.0",
+  "description": "Transforms long Terms of Service walls of text into simple privacy nutrition labels.",
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": ["https://*.tosdr.org/*"],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
