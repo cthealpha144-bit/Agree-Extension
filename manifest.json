@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Agree?",
   "description": "Agree? - Terms of Service and Privacy Policy Checker",
-  "version": "3.5.0",
+  "version": "4.0.0",
   "icons": {
     "16": "Untitled.png"
   },
