@@ -1,18 +1,31 @@
 document.addEventListener("DOMContentLoaded", async () => {
-  // DOM Elements
+  // DOM Navigation & Layout Selectors
   const gradeBadge = document.getElementById("app-grade");
   const container = document.getElementById("points-container");
-  const settingsBtn = document.getElementById("toggle-settings");
-  const settingsTray = document.getElementById("settings-tray");
   const apiSourceSelect = document.getElementById("api-source");
 
-  // 1. Settings Tray Expand/Collapse Listener
-  settingsBtn.addEventListener("click", () => {
-    const isVisible = settingsTray.style.display === "block";
-    settingsTray.style.display = isVisible ? "none" : "block";
+  // Tab Navigation Elements
+  const tabAgreeBtn = document.getElementById("tab-agree");
+  const tabOptionsBtn = document.getElementById("tab-options");
+  const panelAgree = document.getElementById("panel-agree");
+  const panelOptions = document.getElementById("panel-options");
+
+  // 1. Tab Interaction Switching Mechanics
+  tabAgreeBtn.addEventListener("click", () => {
+    tabOptionsBtn.classList.remove("active");
+    tabAgreeBtn.classList.add("active");
+    panelOptions.classList.add("hidden");
+    panelAgree.classList.remove("hidden");
   });
 
-  // Save selected option instantly when changed
+  tabOptionsBtn.addEventListener("click", () => {
+    tabAgreeBtn.classList.remove("active");
+    tabOptionsBtn.classList.add("active");
+    panelAgree.classList.add("hidden");
+    panelOptions.classList.remove("hidden");
+  });
+
+  // Save selected option instantly when changed inside options view
   apiSourceSelect.addEventListener("change", (e) => {
     chrome.storage.local.set({ selectedEngine: e.target.value }, () => {
       executeCoreAnalysis();
@@ -272,9 +285,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // --- CENTRAL DISPLAY RENDER CONTROLLER (Parses tag tiers) ---
+  // --- CENTRAL DISPLAY RENDER CONTROLLER (Parses tag tiers & badge colors) ---
   function renderSavedData(siteData) {
-    gradeBadge.textContent = `Class ${siteData.class || "C"}`;
+    const currentClass = (siteData.class || "C").toUpperCase();
+    gradeBadge.textContent = `Class ${currentClass}`;
+
+    // Clear out any previously applied color modifier classes
+    gradeBadge.classList.remove(
+      "badge-safe",
+      "badge-warning",
+      "badge-risk",
+      "badge-unknown",
+    );
+
+    // Dynamic Class Color Mapping System
+    if (["A", "B"].includes(currentClass)) {
+      gradeBadge.classList.add("badge-safe");
+    } else if (currentClass === "C") {
+      gradeBadge.classList.add("badge-warning");
+    } else if (["D", "E"].includes(currentClass)) {
+      gradeBadge.classList.add("badge-risk");
+    } else {
+      gradeBadge.classList.add("badge-unknown");
+    }
+
+    // Clear and redraw the item rows container
     container.innerHTML = "";
 
     siteData.points.forEach((point) => {
@@ -284,11 +319,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       let tagClass = "tag-neutral";
       let labelText = "Info";
 
-      // Fallback logic for legacy plain strings vs structured object points
       let defaultStatus =
-        siteData.class === "A"
+        currentClass === "A"
           ? "safe"
-          : siteData.class === "B"
+          : currentClass === "B"
             ? "medium"
             : "risk";
       const statusValue =
@@ -313,6 +347,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderFallback(title, message) {
     gradeBadge.textContent = "Class ?";
+    gradeBadge.classList.remove("badge-safe", "badge-warning", "badge-risk");
+    gradeBadge.classList.add("badge-unknown");
     container.innerHTML = `<div class="point-item"><span class="point-text"><strong>${title}</strong>: ${message}</span><span class="risk-tag tag-risk">Fail</span></div>`;
   }
 

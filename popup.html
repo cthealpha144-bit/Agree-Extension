@@ -12,21 +12,69 @@
         color: #000000;
       }
 
-      .nutrition-card {
-        border: 4px solid #000000;
-        padding: 8px;
-        box-sizing: border-box;
+      /* Container holding the entire tabbed box architecture */
+      .tabbed-container {
         position: relative;
+        margin-top: 46px; /* Increased slightly to give the thick tabs breathing room */
       }
 
-      .header-row {
+      /* Tabs Row Layout */
+      .tabs-header {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
+        position: absolute;
+        top: -38px; /* Adjusted to flush perfectly with the 6px main border */
+        left: 0;
+        width: 100%;
+        z-index: 2;
       }
 
+      .tab-button {
+        font-size: 24px;
+        font-weight: 900;
+        background-color: #ffffff;
+        color: #888888;
+        border: 6px solid #000000; /* Match the 6px thickness of the main content box */
+        border-bottom: none; /* Keep the bottom open to merge with the frame */
+        padding: 4px 16px;
+        cursor: pointer;
+        user-select: none;
+        outline: none;
+      }
+
+      /* Unique corner alignments for the blueprint shapes */
+      #tab-agree {
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+      }
+
+      #tab-options {
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+        margin-left: -6px; /* Flushes the 6px side borders together tightly without double-thick overlapping */
+      }
+
+      /* Active Tab State: Forces the button down to clip and hide the main frame's top border */
+      .tab-button.active {
+        color: #000000;
+        padding-bottom: 10px; /* Pushes the white background downward to mask the main container border line */
+        margin-bottom: -6px; /* Snaps perfectly into the 6px main container border gap */
+        background-color: #ffffff;
+        z-index: 3;
+      }
+
+      /* Main Data View Panel Wrapper */
+      .main-content-box {
+        border: 6px solid #000000; /* Keep this locked at 6px matching your design */
+        padding: 16px 12px;
+        min-height: 300px;
+        background-color: #ffffff;
+        position: relative;
+        z-index: 1;
+      }
+
+      /* Layout Typography & Utilities */
       .title {
-        font-size: 28px;
+        font-size: 26px;
         font-weight: 900;
         text-transform: uppercase;
         line-height: 1;
@@ -34,66 +82,22 @@
         letter-spacing: -0.5px;
       }
 
-      .settings-btn {
-        background: none;
-        border: none;
-        font-size: 20px;
-        cursor: pointer;
-        padding: 0 4px;
-        user-select: none;
-      }
-
       .subtitle {
         font-size: 13px;
-        margin: 4px 0 8px 0;
+        margin: 4px 0 12px 0;
+        color: #333333;
       }
 
-      /* Settings Tray Styles */
-      .settings-tray {
-        display: none;
-        background-color: #f1f3f4;
-        border: 2px solid #000000;
-        padding: 8px;
-        margin-bottom: 8px;
-        font-size: 12px;
-      }
-
-      .settings-tray h3 {
-        margin: 0 0 6px 0;
-        text-transform: uppercase;
-        font-size: 11px;
-        letter-spacing: 0.5px;
-      }
-
-      .setting-control {
-        margin-bottom: 4px;
-      }
-
-      .setting-control label {
-        display: block;
-        font-weight: bold;
-        margin-bottom: 2px;
-      }
-
-      .setting-control select {
-        width: 100%;
-        padding: 4px;
-        border: 1px solid #000000;
-        box-sizing: border-box;
-        font-size: 12px;
-      }
-
-      /* Core Layout Elements */
       .thick-bar {
         height: 8px;
         background-color: #000000;
-        margin: 6px 0;
+        margin: 8px 0;
       }
 
       .thin-bar {
         height: 2px;
         background-color: #000000;
-        margin: 6px 0;
+        margin: 8px 0;
       }
 
       .metric-row {
@@ -106,18 +110,33 @@
 
       .grade-badge {
         font-weight: 900;
-        background-color: #000000;
         color: #ffffff;
-        padding: 2px 8px;
+        padding: 4px 10px;
         border-radius: 4px;
         text-transform: uppercase;
+        font-size: 14px;
+        transition: background-color 0.2s ease; /* Smooth color shifting switch */
       }
+
+      /* Dynamic Class Color Modifiers */
+      .badge-safe {
+        background-color: #137333 !important;
+      } /* Green for A & B */
+      .badge-warning {
+        background-color: #b06000 !important;
+      } /* Amber for C */
+      .badge-risk {
+        background-color: #c5221f !important;
+      } /* Red for D & E */
+      .badge-unknown {
+        background-color: #000000 !important;
+      } /* Black fallback */
 
       .section-header {
         font-size: 12px;
         font-weight: 800;
         text-transform: uppercase;
-        margin: 8px 0 4px 0;
+        margin: 12px 0 6px 0;
       }
 
       .data-points {
@@ -129,8 +148,8 @@
         justify-content: space-between;
         align-items: flex-start;
         font-size: 12px;
-        border-bottom: 1px solid #c0c0c0;
-        padding: 6px 0;
+        border-bottom: 1px solid #e0e0e0;
+        padding: 8px 0;
       }
 
       .point-text {
@@ -142,11 +161,10 @@
         font-weight: bold;
         font-size: 10px;
         text-transform: uppercase;
-        padding: 1px 4px;
+        padding: 2px 6px;
         border-radius: 3px;
       }
 
-      /* Tag Colors Mapping */
       .tag-safe {
         background-color: #e6f4ea;
         color: #137333;
@@ -154,7 +172,7 @@
       .tag-warning {
         background-color: #fef7e0;
         color: #b06000;
-      } /* New Medium Color */
+      }
       .tag-neutral {
         background-color: #f1f3f4;
         color: #3c4043;
@@ -166,62 +184,101 @@
 
       .footer {
         font-size: 9px;
-        line-height: 1.2;
-        margin-top: 10px;
-        color: #5f6368;
+        line-height: 1.3;
+        margin-top: 14px;
+        color: #666666;
+      }
+
+      /* Options Panel Centered Styling Card */
+      .engine-preferences-card {
+        border: 2px solid #000000;
+        padding: 12px;
+        margin-top: 60px; /* Centers it vertically inside the view frame */
+      }
+
+      .engine-preferences-card h3 {
+        margin: 0 0 6px 0;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 900;
+      }
+
+      .setting-control label {
+        display: block;
+        font-size: 12px;
+        margin-bottom: 4px;
+      }
+
+      .setting-control select {
+        width: 100%;
+        padding: 6px;
+        border: 1px solid #000000;
+        background-color: #ffffff;
+        font-size: 12px;
+        outline: none;
+      }
+
+      /* Core Visibility Controller: Toggles panel visibility seamlessly */
+      .hidden {
+        display: none !important;
       }
     </style>
   </head>
   <body>
-    <div class="nutrition-card">
-      <div class="header-row">
-        <h1 class="title">Privacy Facts</h1>
-        <button
-          class="settings-btn"
-          id="toggle-settings"
-          title="Engine Settings"
-        >
-          ⚙️
-        </button>
+    <div class="tabbed-container">
+      <div class="tabs-header">
+        <button class="tab-button active" id="tab-agree">Agree?</button>
+        <button class="tab-button" id="tab-options">Options</button>
       </div>
-      <div class="subtitle">Data Practices Summary</div>
 
-      <div class="settings-tray" id="settings-tray">
-        <h3>Engine Preferences</h3>
-        <div class="setting-control">
-          <label for="api-source">Active Intelligence Source</label>
-          <select id="api-source">
-            <option value="local">Local Database / Smart Predictor</option>
-            <option value="tosdr">ToS;DR Legal Terms API</option>
-            <option value="duckduckgo">DuckDuckGo Tracker Radar</option>
-            <option value="urlvoid">APIVoid / URLVoid Domain Safety</option>
-          </select>
+      <div class="main-content-box">
+        <div id="panel-agree">
+          <h1 class="title">Privacy Facts</h1>
+          <div class="subtitle">Data Practices Summary</div>
+
+          <div class="thick-bar"></div>
+
+          <div class="metric-row">
+            <span><strong>Privacy Rating</strong></span>
+            <span class="grade-badge" id="app-grade">Class ...</span>
+          </div>
+
+          <div class="thin-bar"></div>
+
+          <div class="section-header">Key Tracker Breakdown</div>
+
+          <div class="data-points" id="points-container">
+            <div class="point-item">
+              <span class="point-text">Assembling data structures...</span>
+              <span class="risk-tag tag-neutral">Wait</span>
+            </div>
+          </div>
+
+          <div class="thick-bar"></div>
+
+          <div class="footer">
+            * Open Source Engine Framework. Configure inputs dynamically inside
+            the options panel above.
+          </div>
         </div>
-      </div>
 
-      <div class="thick-bar"></div>
-
-      <div class="metric-row">
-        <span><strong>Privacy Rating</strong></span>
-        <span class="grade-badge" id="app-grade">Class ...</span>
-      </div>
-
-      <div class="thin-bar"></div>
-
-      <div class="section-header">Key Tracker Breakdown</div>
-
-      <div class="data-points" id="points-container">
-        <div class="point-item">
-          <span class="point-text">Assembling data structures...</span>
-          <span class="risk-tag tag-neutral">Wait</span>
+        <div id="panel-options" class="hidden">
+          <div class="engine-preferences-card">
+            <h3>Engine Preferences</h3>
+            <div class="setting-control">
+              <label for="api-source"
+                ><strong>Active Intelligence Source</strong></label
+              >
+              <select id="api-source">
+                <option value="local">Local Database / Smart Predictor</option>
+                <option value="tosdr">ToS;DR Legal Terms API</option>
+                <option value="duckduckgo">DuckDuckGo Tracker Radar</option>
+                <option value="urlvoid">APIVoid / URLVoid Domain Safety</option>
+              </select>
+            </div>
+          </div>
         </div>
-      </div>
-
-      <div class="thick-bar"></div>
-
-      <div class="footer">
-        * Open Source Engine Framework. Configure inputs dynamically inside the
-        options panel above.
       </div>
     </div>
 
