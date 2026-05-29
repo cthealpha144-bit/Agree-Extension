@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <style>
       body {
-        width: 320px;
+        width: 340px;
         font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
         margin: 0;
         padding: 12px;
@@ -16,6 +16,13 @@
         border: 4px solid #000000;
         padding: 8px;
         box-sizing: border-box;
+        position: relative;
+      }
+
+      .header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
       }
 
       .title {
@@ -23,15 +30,60 @@
         font-weight: 900;
         text-transform: uppercase;
         line-height: 1;
-        margin: 0 0 4px 0;
+        margin: 0;
         letter-spacing: -0.5px;
+      }
+
+      .settings-btn {
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        padding: 0 4px;
+        user-select: none;
       }
 
       .subtitle {
         font-size: 13px;
-        margin: 0 0 8px 0;
+        margin: 4px 0 8px 0;
       }
 
+      /* Settings Tray Styles */
+      .settings-tray {
+        display: none;
+        background-color: #f1f3f4;
+        border: 2px solid #000000;
+        padding: 8px;
+        margin-bottom: 8px;
+        font-size: 12px;
+      }
+
+      .settings-tray h3 {
+        margin: 0 0 6px 0;
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 0.5px;
+      }
+
+      .setting-control {
+        margin-bottom: 4px;
+      }
+
+      .setting-control label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 2px;
+      }
+
+      .setting-control select {
+        width: 100%;
+        padding: 4px;
+        border: 1px solid #000000;
+        box-sizing: border-box;
+        font-size: 12px;
+      }
+
+      /* Core Layout Elements */
       .thick-bar {
         height: 8px;
         background-color: #000000;
@@ -94,10 +146,15 @@
         border-radius: 3px;
       }
 
+      /* Tag Colors Mapping */
       .tag-safe {
         background-color: #e6f4ea;
         color: #137333;
       }
+      .tag-warning {
+        background-color: #fef7e0;
+        color: #b06000;
+      } /* New Medium Color */
       .tag-neutral {
         background-color: #f1f3f4;
         color: #3c4043;
@@ -117,8 +174,30 @@
   </head>
   <body>
     <div class="nutrition-card">
-      <h1 class="title">Privacy Facts</h1>
+      <div class="header-row">
+        <h1 class="title">Privacy Facts</h1>
+        <button
+          class="settings-btn"
+          id="toggle-settings"
+          title="Engine Settings"
+        >
+          ⚙️
+        </button>
+      </div>
       <div class="subtitle">Data Practices Summary</div>
+
+      <div class="settings-tray" id="settings-tray">
+        <h3>Engine Preferences</h3>
+        <div class="setting-control">
+          <label for="api-source">Active Intelligence Source</label>
+          <select id="api-source">
+            <option value="local">Local Database / Smart Predictor</option>
+            <option value="tosdr">ToS;DR Legal Terms API</option>
+            <option value="duckduckgo">DuckDuckGo Tracker Radar</option>
+            <option value="urlvoid">APIVoid / URLVoid Domain Safety</option>
+          </select>
+        </div>
+      </div>
 
       <div class="thick-bar"></div>
 
@@ -133,7 +212,7 @@
 
       <div class="data-points" id="points-container">
         <div class="point-item">
-          <span class="point-text">Compiling parameters...</span>
+          <span class="point-text">Assembling data structures...</span>
           <span class="risk-tag tag-neutral">Wait</span>
         </div>
       </div>
@@ -141,8 +220,8 @@
       <div class="thick-bar"></div>
 
       <div class="footer">
-        * Information sourced dynamically from peer-reviewed privacy parameters
-        via the ToS;DR project. Values reflect general tracking indexes.
+        * Open Source Engine Framework. Configure inputs dynamically inside the
+        options panel above.
       </div>
     </div>
 
