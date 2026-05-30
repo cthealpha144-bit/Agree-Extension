@@ -8,6 +8,6 @@
     "default_popup": "popup.html"
   },
   "icons": {
-    "128": "Extension Icon.png"
+    "128": "icon.png"
   }
 }
