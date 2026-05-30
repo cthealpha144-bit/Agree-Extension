@@ -1,18 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "Agree?",
-  "description": "Agree? - Terms of Service and Privacy Policy Checker",
-  "version": "4.0.0",
-  "icons": {
-    "16": "Extension Icon.png"
-  },
-  "permissions": ["activeTab", "storage"],
-  "host_permissions": [
-    "https://api.tosdr.org/*",
-    "https://raw.githubusercontent.com/*",
-    "https://api.apivoid.com/*"
-  ],
+  "name": "Agree? - Safe Browsing Assistant",
+  "version": "5.5.0",
+  "description": "Scrapes and analyzes live pages for phishing and security risks.",
+  "permissions": ["activeTab", "scripting"],
   "action": {
     "default_popup": "popup.html"
+  },
+  "icons": {
+    "128": "Extension Icon.png"
   }
 }

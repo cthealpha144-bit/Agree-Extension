@@ -1,356 +1,450 @@
-document.addEventListener("DOMContentLoaded", async () => {
-  // DOM Navigation & Layout Selectors
-  const gradeBadge = document.getElementById("app-grade");
-  const container = document.getElementById("points-container");
-  const apiSourceSelect = document.getElementById("api-source");
+document.addEventListener("DOMContentLoaded", () => {
+  "use strict";
 
-  // Tab Navigation Elements
-  const tabAgreeBtn = document.getElementById("tab-agree");
-  const tabOptionsBtn = document.getElementById("tab-options");
-  const panelAgree = document.getElementById("panel-agree");
-  const panelOptions = document.getElementById("panel-options");
+  const els = {
+    gradeBadge: document.getElementById("app-grade"),
+    container: document.getElementById("points-container"),
+    tabAgreeBtn: document.getElementById("tab-agree"),
+    tabOptionsBtn: document.getElementById("tab-options"),
+    panelAgree: document.getElementById("panel-agree"),
+    panelOptions: document.getElementById("panel-options"),
+  };
 
-  // 1. Tab Interaction Switching Mechanics
-  tabAgreeBtn.addEventListener("click", () => {
-    tabOptionsBtn.classList.remove("active");
-    tabAgreeBtn.classList.add("active");
-    panelOptions.classList.add("hidden");
-    panelAgree.classList.remove("hidden");
-  });
+  const INTERNAL_PREFIXES = ["chrome://", "chrome-extension://", "about:"];
+  const LOCAL_PREFIX = "file://";
+  let runId = 0;
 
-  tabOptionsBtn.addEventListener("click", () => {
-    tabAgreeBtn.classList.remove("active");
-    tabOptionsBtn.classList.add("active");
-    panelAgree.classList.add("hidden");
-    panelOptions.classList.remove("hidden");
-  });
+  init();
 
-  // Save selected option instantly when changed inside options view
-  apiSourceSelect.addEventListener("change", (e) => {
-    chrome.storage.local.set({ selectedEngine: e.target.value }, () => {
-      executeCoreAnalysis();
-    });
-  });
+  async function init() {
+    wireTabs();
+    await executeAnalysis();
+  }
 
-  // 2. Central Execution Pipeline Router
-  async function executeCoreAnalysis() {
+  function wireTabs() {
+    els.tabAgreeBtn?.addEventListener("click", () => switchTab("agree"));
+    els.tabOptionsBtn?.addEventListener("click", () => switchTab("options"));
+  }
+
+  function switchTab(tab) {
+    const agree = tab === "agree";
+    els.tabAgreeBtn?.classList.toggle("active", agree);
+    els.tabOptionsBtn?.classList.toggle("active", !agree);
+    els.panelAgree?.classList.toggle("hidden", !agree);
+    els.panelOptions?.classList.toggle("hidden", agree);
+  }
+
+  async function executeAnalysis() {
+    const currentRun = ++runId;
+    setLoading("Analyzing page telemetry...");
+
     try {
-      container.innerHTML = "";
-
       const [tab] = await chrome.tabs.query({
         active: true,
         currentWindow: true,
       });
-      if (!tab || !tab.url) {
-        renderFallback("System Error", "No active window discovered.");
-        return;
+
+      if (currentRun !== runId) return;
+
+      if (!tab?.url) {
+        return renderFallback("No Target", "No active webpage detected.");
       }
 
-      // --- SYSTEM GUARD: Catch internal chrome:// or local file:// settings spaces ---
-      if (
-        tab.url.startsWith("chrome://") ||
-        tab.url.startsWith("chrome-extension://") ||
-        tab.url.startsWith("about:")
-      ) {
-        renderSavedData({
-          class: "A",
-          points: [
+      if (INTERNAL_PREFIXES.some((p) => tab.url.startsWith(p))) {
+        const report = {
+          score: 100,
+          verdict: "Safe",
+          warnings: [
             {
-              text: "Internal browser subsystem environment. No third-party tracking vectors present.",
-              status: "safe",
-            },
-            {
-              text: "Local configurations are completely isolated from external analytics infrastructure.",
+              text: "Internal browser workspace. Environment is secure.",
               status: "safe",
             },
           ],
-        });
+        };
+        renderSavedData(report);
+        renderAnalysisLog(
+          tab.url,
+          {
+            isHttps: true,
+            scriptCount: 0,
+            formCount: 0,
+            inputCount: 0,
+            hasPassword: false,
+            obfuscationFlag: false,
+            hiddenIframe: false,
+            hasKeywords: false,
+          },
+          report,
+          false,
+        );
         return;
+      }
+
+      if (tab.url.startsWith(LOCAL_PREFIX)) {
+        return renderFallback(
+          "Local File",
+          "Offline system paths cannot be audited.",
+        );
       }
 
       const urlObj = new URL(tab.url);
-      let domain = urlObj.hostname.replace("www.", "");
+      const domain = urlObj.hostname.replace(/^www\./, "");
+      const isHttps = urlObj.protocol === "https:";
 
-      // If hostname is empty or evaluates to a local path file
-      if (!domain || tab.url.startsWith("file://")) {
-        renderFallback("Local Resource", "Cannot audit offline local files.");
-        return;
-      }
-
-      // Pull current setting choice from storage memory
-      chrome.storage.local.get(["selectedEngine"], async (config) => {
-        const activeEngine = config.selectedEngine || "local";
-        apiSourceSelect.value = activeEngine;
-
-        // SWITCH ROUTING ENGINE MATRIX
-        switch (activeEngine) {
-          case "local":
-            runLocalDatabaseEngine(domain);
-            break;
-          case "tosdr":
-            runPublicApiFallbackEngine(domain);
-            break;
-          case "duckduckgo":
-            runDuckDuckGoRadarEngine(domain);
-            break;
-          case "urlvoid":
-            runUrlVoidSafetyEngine(domain);
-            break;
-          default:
-            runLocalDatabaseEngine(domain);
-        }
-      });
-    } catch (err) {
-      console.error("Core Engine Interruption:", err);
-      renderFallback("Processing Block", "Initialization pipeline failure.");
-    }
-  }
-
-  // --- ENGINE A: LOCAL STORAGE DICTIONARY & AUTOMATIC PREDICTOR ---
-  function runLocalDatabaseEngine(domain) {
-    if (GLOBAL_PRIVACY_DB[domain]) {
-      renderSavedData(GLOBAL_PRIVACY_DB[domain]);
-    } else {
-      chrome.storage.local.get([domain], (result) => {
-        if (result[domain]) {
-          renderSavedData(result[domain]);
-        } else {
-          const ext = domain.split(".").pop();
-          let fallbackRecord = {};
-
-          if (["org", "gov", "edu"].includes(ext)) {
-            fallbackRecord = {
-              class: "B",
-              points: [
-                {
-                  text: `Non-commercial system domain (.${ext}). Default security data isolation expected.`,
-                  status: "safe",
-                },
-                {
-                  text: "No corporate marketing data brokers mapped to root hostname.",
-                  status: "safe",
-                },
-              ],
-            };
-          } else {
-            // Standard unlisted site logic uses Medium tags for baseline practices!
-            fallbackRecord = {
-              class: "C",
-              points: [
-                {
-                  text: `Data protocols on ${domain} allow general marketing cookie aggregation.`,
-                  status: "medium",
-                },
-                {
-                  text: "Navigating this site registers implicit consent for fundamental metric analysis.",
-                  status: "risk",
-                },
-              ],
-            };
-          }
-          chrome.storage.local.set({ [domain]: fallbackRecord });
-          renderSavedData(fallbackRecord);
-        }
-      });
-    }
-  }
-
-  // --- ENGINE B: PUBLIC LEGAL REPOSITORY PATH ---
-  async function runPublicApiFallbackEngine(domain) {
-    container.innerHTML = `<div class="point-item"><span class="point-text">Pinging legal term database for <strong>${domain}</strong>...</span><span class="risk-tag tag-neutral">Sync</span></div>`;
-
-    const quickIds = {
-      "google.com": "google",
-      "youtube.com": "youtube",
-      "facebook.com": "facebook",
-      "wikipedia.org": "wikipedia",
-    };
-    const targetId = quickIds[domain] || domain.split(".")[0];
-
-    try {
-      const response = await fetch(
-        `https://api.tosdr.org/v2/service/${targetId}.json`,
-      );
-      if (!response.ok) throw new Error();
-
-      const payload = await response.json();
-      const details = payload.parameters || {};
-
-      const mappedData = {
-        class: details.class || "C",
-        points: (details.points || []).slice(0, 3).map((p) => ({
-          text: p.title,
-          status:
-            p.status === "bad"
-              ? "risk"
-              : p.status === "good"
-                ? "safe"
-                : "medium",
-        })),
+      let domData = {
+        hasPassword: false,
+        obfuscationFlag: false,
+        hiddenIframe: false,
+        hasKeywords: false,
+        scriptCount: 0,
+        formCount: 0,
+        inputCount: 0,
       };
 
-      if (mappedData.points.length === 0) throw new Error();
-      renderSavedData(mappedData);
-    } catch {
-      runLocalDatabaseEngine(domain);
-    }
-  }
+      try {
+        const scriptResults = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: () => {
+            const text = document.body?.innerText || "";
+            const forms = document.querySelectorAll("form");
+            const scripts = document.querySelectorAll("script");
+            const iframes = document.querySelectorAll("iframe");
+            const inputs = document.querySelectorAll("input");
+            const hasPassword = !!document.querySelector(
+              "input[type='password']",
+            );
 
-  // --- ENGINE C: DUCKDUCKGO TRACKER RADAR LOADER ---
-  async function runDuckDuckGoRadarEngine(domain) {
-    container.innerHTML = `<div class="point-item"><span class="point-text">Checking DuckDuckGo Tracker Blocklists...</span><span class="risk-tag tag-neutral">Blocklist</span></div>`;
+            let obfuscationFlag = false;
+            scripts.forEach((s) => {
+              const content = s.textContent || "";
+              if (
+                content.includes("eval(function(") ||
+                content.includes("unescape(") ||
+                (content.match(/\\x[0-9a-fA-F]{2}/g) || []).length > 25
+              ) {
+                obfuscationFlag = true;
+              }
+            });
 
-    try {
-      const res = await fetch(
-        `https://raw.githubusercontent.com/duckduckgo/tracker-radar/main/domains/${domain}.json`,
-      );
-      if (!res.ok) {
-        renderSavedData({
-          class: "A",
-          points: [
-            {
-              text: `Clean Audit! <strong>${domain}</strong> is not listed as a tracking node in DuckDuckGo's database.`,
-              status: "safe",
-            },
-            {
-              text: "No background fingerprinting assets found.",
-              status: "safe",
-            },
-          ],
+            let hiddenIframe = false;
+            iframes.forEach((i) => {
+              const style = window.getComputedStyle(i);
+              if (
+                style.display === "none" ||
+                style.visibility === "hidden" ||
+                i.getAttribute("width") === "0" ||
+                i.getAttribute("height") === "0"
+              ) {
+                hiddenIframe = true;
+              }
+            });
+
+            const riskPhrases = [
+              "verify your account",
+              "confirm your password",
+              "security alert: login",
+              "unauthorized access detected",
+              "billing update required",
+              "suspend your wallet",
+            ];
+            const lowerText = text.toLowerCase();
+            const hasKeywords = riskPhrases.some((phrase) =>
+              lowerText.includes(phrase),
+            );
+
+            return {
+              hasPassword,
+              obfuscationFlag,
+              hiddenIframe,
+              hasKeywords,
+              scriptCount: scripts.length,
+              formCount: forms.length,
+              inputCount: inputs.length,
+            };
+          },
         });
-        return;
+
+        if (scriptResults?.[0]?.result) {
+          domData = scriptResults[0].result;
+        }
+      } catch (domErr) {
+        console.warn(
+          "DOM scraping blocked by local Content Security Policy rules:",
+          domErr,
+        );
       }
 
-      const data = await res.json();
-      const trackerCount = data.subdomains ? data.subdomains.length : 0;
+      let isTrackedNode = false;
+      try {
+        const radarCheck = await fetch(
+          `https://raw.githubusercontent.com/duckduckgo/tracker-radar/main/domains/${domain}.json`,
+        );
+        if (radarCheck.ok) {
+          isTrackedNode = true;
+        }
+      } catch (_) {}
 
-      renderSavedData({
-        class: trackerCount > 5 ? "E" : "D",
-        points: [
-          {
-            text: `Flagged tracker entity! DDG Radar tracks ${trackerCount} active tracking sub-networks.`,
-            status: "risk",
-          },
-          {
-            text: `Primary corporate owner: <strong>${data.owner?.name || "Unknown Entity"}</strong>`,
-            status: "medium",
-          },
-          {
-            text: `Prevalent tracking category footprint: ${data.categories?.[0] || "General Analytics"}`,
-            status: "medium",
-          },
-        ],
-      });
-    } catch {
-      runLocalDatabaseEngine(domain);
-    }
-  }
+      if (currentRun !== runId) return;
 
-  // --- ENGINE D: APIVOID / URLVOID SAFETY INDEX ---
-  async function runUrlVoidSafetyEngine(domain) {
-    container.innerHTML = `<div class="point-item"><span class="point-text">Scanning domain safety metrics...</span><span class="risk-tag tag-neutral">Audit</span></div>`;
-
-    try {
-      const res = await fetch(
-        `https://api.apivoid.com/urlvoid/v1/scan?key=sandbox_demo_key&url=${domain}`,
+      const analysisReport = calculateSafetyScore(
+        isHttps,
+        domData,
+        isTrackedNode,
       );
-      if (!res.ok) throw new Error();
-      const payload = await res.json();
-      const scan = payload.data?.report || {};
-
-      const safetyScore = scan.security_checks?.detections || 0;
-
-      renderSavedData({
-        class: safetyScore > 0 ? "D" : "B",
-        points: [
-          {
-            text: `Server Hosting Location verified inside: ${scan.server?.country_name || "Global Node"}`,
-            status: "medium",
-          },
-          {
-            text: `IP Connection Identity address listed: ${scan.server?.ip || "Protected"}`,
-            status: "medium",
-          },
-          {
-            text:
-              safetyScore > 0
-                ? `Alert: Flagged on ${safetyScore} domain blocklists.`
-                : "Domain cleared cleanly across public firewalls.",
-            status: safetyScore > 0 ? "risk" : "safe",
-          },
-        ],
-      });
-    } catch {
-      runLocalDatabaseEngine(domain);
-    }
-  }
-
-  // --- CENTRAL DISPLAY RENDER CONTROLLER (Parses tag tiers & badge colors) ---
-  function renderSavedData(siteData) {
-    const currentClass = (siteData.class || "C").toUpperCase();
-    gradeBadge.textContent = `Class ${currentClass}`;
-
-    // Clear out any previously applied color modifier classes
-    gradeBadge.classList.remove(
-      "badge-safe",
-      "badge-warning",
-      "badge-risk",
-      "badge-unknown",
-    );
-
-    // Dynamic Class Color Mapping System
-    if (["A", "B"].includes(currentClass)) {
-      gradeBadge.classList.add("badge-safe");
-    } else if (currentClass === "C") {
-      gradeBadge.classList.add("badge-warning");
-    } else if (["D", "E"].includes(currentClass)) {
-      gradeBadge.classList.add("badge-risk");
-    } else {
-      gradeBadge.classList.add("badge-unknown");
-    }
-
-    // Clear and redraw the item rows container
-    container.innerHTML = "";
-
-    siteData.points.forEach((point) => {
-      const row = document.createElement("div");
-      row.className = "point-item";
-
-      let tagClass = "tag-neutral";
-      let labelText = "Info";
-
-      let defaultStatus =
-        currentClass === "A"
-          ? "safe"
-          : currentClass === "B"
-            ? "medium"
-            : "risk";
-      const statusValue =
-        typeof point === "string" ? defaultStatus : point.status;
-      const textValue = typeof point === "string" ? point : point.text;
-
-      if (statusValue === "risk") {
-        tagClass = "tag-risk";
-        labelText = "Risk";
-      } else if (statusValue === "warning" || statusValue === "medium") {
-        tagClass = "tag-warning";
-        labelText = "Medium";
-      } else if (statusValue === "safe") {
-        tagClass = "tag-safe";
-        labelText = "Safe";
+      renderSavedData(analysisReport);
+      renderAnalysisLog(tab.url, domData, analysisReport, isTrackedNode);
+    } catch (err) {
+      console.error(err);
+      if (currentRun === runId) {
+        renderFallback("Scanner Error", err.message);
       }
-
-      row.innerHTML = `<span class="point-text">${textValue}</span><span class="risk-tag ${tagClass}">${labelText}</span>`;
-      container.appendChild(row);
-    });
+    }
   }
 
-  function renderFallback(title, message) {
-    gradeBadge.textContent = "Class ?";
-    gradeBadge.classList.remove("badge-safe", "badge-warning", "badge-risk");
-    gradeBadge.classList.add("badge-unknown");
-    container.innerHTML = `<div class="point-item"><span class="point-text"><strong>${title}</strong>: ${message}</span><span class="risk-tag tag-risk">Fail</span></div>`;
+  function calculateSafetyScore(isHttps, dom, isTrackedNode) {
+    let score = 100;
+    const warnings = [];
+
+    if (!isHttps) {
+      score -= 30;
+      warnings.push({
+        text: "Insecure unencrypted connection profile (HTTP).",
+        status: "danger",
+      });
+    } else {
+      warnings.push({
+        text: "Secure encryption handshake confirmed (HTTPS).",
+        status: "safe",
+      });
+    }
+
+    if (!isHttps && dom.hasPassword) {
+      score -= 25;
+      warnings.push({
+        text: "Critical: Input passwords requested over unencrypted plain text.",
+        status: "danger",
+      });
+    }
+
+    if (dom.hasKeywords) {
+      score -= 20;
+      warnings.push({
+        text: "Suspicious identity or credential manipulation text flags found.",
+        status: "danger",
+      });
+    }
+
+    if (dom.obfuscationFlag) {
+      score -= 15;
+      warnings.push({
+        text: "Obfuscated Javascript string packs or runtime structures hidden.",
+        status: "danger",
+      });
+    }
+
+    if (dom.hiddenIframe) {
+      score -= 10;
+      warnings.push({
+        text: "Hidden inline visual canvas frames (iframes) detected.",
+        status: "warning",
+      });
+    }
+
+    if (isTrackedNode) {
+      score -= 10;
+      warnings.push({
+        text: "Domain explicitly indexed inside background tracker maps.",
+        status: "warning",
+      });
+    }
+
+    if (dom.scriptCount > 35) {
+      score -= 5;
+      warnings.push({
+        text: `Heavy processing load: registers ${dom.scriptCount} external script bindings.`,
+        status: "warning",
+      });
+    }
+
+    score = Math.max(0, Math.min(100, score));
+
+    let verdict = "Safe";
+    if (score < 50) {
+      verdict = "Unsafe";
+    } else if (score < 80) {
+      verdict = "Suspicious";
+    }
+
+    if (warnings.length === 1 && warnings[0].status === "safe") {
+      warnings.push({
+        text: "No hostile behavioral indicators flagged on the DOM surface.",
+        status: "safe",
+      });
+    }
+
+    return { score, verdict, warnings };
   }
 
-  executeCoreAnalysis();
+  function renderSavedData(data) {
+    const score = data.score;
+    const verdict = data.verdict;
+
+    els.gradeBadge.textContent = `${score}/100`;
+
+    els.gradeBadge.className = "grade-badge";
+    if (verdict === "Safe") {
+      els.gradeBadge.classList.add("badge-safe");
+    } else if (verdict === "Suspicious") {
+      els.gradeBadge.classList.add("badge-warning");
+    } else {
+      els.gradeBadge.classList.add("badge-risk");
+    }
+
+    const classMap = {
+      safe: "tag-safe",
+      warning: "tag-warning",
+      danger: "tag-risk",
+    };
+
+    els.container.innerHTML =
+      `
+      <div style="font-weight: 700; font-size: 13px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; padding-left: 4px;">
+        <span>Verdict:</span> 
+        <span class="risk-tag ${verdict === "Safe" ? "tag-safe" : verdict === "Suspicious" ? "tag-warning" : "tag-risk"}">
+          ${verdict.toUpperCase()}
+        </span>
+      </div>
+    ` +
+      data.warnings
+        .map(
+          (w) => `
+        <div class="point-item" style="border-left-color: ${w.status === "safe" ? "#198754" : w.status === "warning" ? "#ffc107" : "#dc3545"}">
+          <span class="point-text">${escapeHtml(w.text)}</span>
+          <span class="risk-tag ${classMap[w.status] || "tag-neutral"}">
+            ${w.status === "danger" ? "WARNING" : w.status.toUpperCase()}
+          </span>
+        </div>
+      `,
+        )
+        .join("");
+  }
+
+  function renderAnalysisLog(url, dom, report, trackerRadarMatch) {
+    if (!els.panelOptions) return;
+
+    const isHttps = url.startsWith("https:");
+
+    els.panelOptions.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 10px; font-size: 12px; color: #333;">
+        
+        <div style="background: #f8f9fa; padding: 12px; border-radius: 12px; border: 1px solid #e9ecef;">
+          <strong style="color: #6c757d; display: block; margin-bottom: 4px; text-transform: uppercase; font-size: 10px;">Target URL</strong>
+          <span style="word-break: break-all; font-family: monospace; background: #e9ecef; padding: 4px 6px; border-radius: 6px; display: block;">${escapeHtml(url)}</span>
+        </div>
+
+        <div style="background: #f8f9fa; padding: 12px; border-radius: 12px; border: 1px solid #e9ecef;">
+          <strong style="color: #6c757d; display: block; margin-bottom: 6px; text-transform: uppercase; font-size: 10px;">Scraped Metadata Indicators</strong>
+          
+          <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e9ecef;">
+            <span>Connection Security:</span>
+            <span style="font-weight: 600; color: ${isHttps ? "#198754" : "#dc3545"}">${isHttps ? "HTTPS" : "HTTP"}</span>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e9ecef;">
+            <span>Total Scripts Loaded:</span>
+            <span style="font-weight: 600;">${dom.scriptCount}</span>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e9ecef;">
+            <span>DOM Forms Detected:</span>
+            <span style="font-weight: 600;">${dom.formCount}</span>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e9ecef;">
+            <span>DOM Input Elements:</span>
+            <span style="font-weight: 600;">${dom.inputCount}</span>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e9ecef;">
+            <span>Password Vector Scraped:</span>
+            <span style="font-weight: 600; color: ${dom.hasPassword ? "#dc3545" : "#198754"}">${dom.hasPassword ? "YES" : "NO"}</span>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e9ecef;">
+            <span>Obfuscated/Packed Script:</span>
+            <span style="font-weight: 600; color: ${dom.obfuscationFlag ? "#dc3545" : "#198754"}">${dom.obfuscationFlag ? "YES" : "NO"}</span>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e9ecef;">
+            <span>Hidden Frame (iframes):</span>
+            <span style="font-weight: 600; color: ${dom.hiddenIframe ? "#ffc107" : "#198754"}">${dom.hiddenIframe ? "YES" : "NO"}</span>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e9ecef;">
+            <span>Phishing Keyword Match:</span>
+            <span style="font-weight: 600; color: ${dom.hasKeywords ? "#dc3545" : "#198754"}">${dom.hasKeywords ? "YES" : "NO"}</span>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; padding: 6px 0;">
+            <span>Tracker Radar Listed:</span>
+            <span style="font-weight: 600; color: ${trackerRadarMatch ? "#ffc107" : "#198754"}">${trackerRadarMatch ? "YES" : "NO"}</span>
+          </div>
+
+        </div>
+
+        <div style="background: #f8f9fa; padding: 12px; border-radius: 12px; border: 1px solid #e9ecef;">
+          <strong style="color: #6c757d; display: block; margin-bottom: 4px; text-transform: uppercase; font-size: 10px;">Scoring Processing Ledger</strong>
+          <div style="font-size: 11px; font-family: monospace; line-height: 1.4; color: #495057;">
+            Initial Baseline: 100 points<br>
+            ${!isHttps ? "- Deduct 30: Insecure protocol<br>" : ""}
+            ${!isHttps && dom.hasPassword ? "- Deduct 25: Unencrypted password input<br>" : ""}
+            ${dom.hasKeywords ? "- Deduct 20: Phishing string match<br>" : ""}
+            ${dom.obfuscationFlag ? "- Deduct 15: Obfuscated script payload<br>" : ""}
+            ${dom.hiddenIframe ? "- Deduct 10: Off-canvas iframe element<br>" : ""}
+            ${trackerRadarMatch ? "- Deduct 10: Listed tracker domain<br>" : ""}
+            ${dom.scriptCount > 35 ? "- Deduct 5: High script volume threshold<br>" : ""}
+            <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #dee2e6; font-weight: 700; font-size: 12px; color: #212529;">
+              Calculated Remainder: ${report.score} / 100 (${report.verdict})
+            </div>
+          </div>
+        </div>
+
+      </div>
+    `;
+  }
+
+  function renderFallback(title, msg) {
+    els.gradeBadge.textContent = "?";
+    els.gradeBadge.className = "grade-badge badge-unknown";
+
+    els.container.innerHTML = `
+      <div class="point-item">
+        <span class="point-text">
+          <strong>${escapeHtml(title)}</strong><br>
+          ${escapeHtml(msg)}
+        </span>
+      </div>
+    `;
+  }
+
+  function setLoading(text) {
+    els.gradeBadge.textContent = "...";
+    els.gradeBadge.className = "grade-badge badge-unknown";
+
+    els.container.innerHTML = `
+      <div class="point-item">
+        <span class="point-text">${escapeHtml(text)}</span>
+        <span class="risk-tag tag-neutral">RUNNING</span>
+      </div>
+    `;
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
 });
