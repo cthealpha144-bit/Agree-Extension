@@ -1,3 +1,5 @@
+CURRENTLY BEING UPDATED SO FILES MAY BE OUTDATED OR NOT WORK 
+
 Agree? Extension
 
 An open-source, client-side browser extension that maps website privacy policies and data practices into a layout styled to look like a nutrition facts label. 
