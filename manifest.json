@@ -4,7 +4,7 @@
   "description": "Agree? - Terms of Service and Privacy Policy Checker",
   "version": "4.0.0",
   "icons": {
-    "16": "Untitled.png"
+    "16": "Extension Icon.png"
   },
   "permissions": ["activeTab", "storage"],
   "host_permissions": [
