@@ -1,6 +1,5 @@
-CURRENTLY BEING UPDATED SO FILES MAY BE OUTDATED OR NOT WORK 
-
-Agree? Extension
+Agree? - Safe Browsing Assistant
+Scrapes and analyzes live pages for phishing and security risks.
 
 An open-source, client-side browser extension that maps website privacy policies and data practices into a layout styled to look like a nutrition facts label. 
 The extension runs completely within the client environment to evaluate privacy risks, tracking behaviors, and cookie protocols upon navigating to a web domain.
