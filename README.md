@@ -8,7 +8,7 @@ Repository Guide
 manifest.json - Declares extension metadata, localized configuration permissions, and elevated host API rules.  
 popup.html - The User Interface  
 popup.js -  Coordinates the tab-switching event handlers, API request matrices, and class color badge states.  
-Extension icon.png - pretty self explanatory, it is the icon.  
+icon.png - pretty self explanatory, it is the icon.  
 
 Installation Instructions (For Chromium Based Browsers)
 
