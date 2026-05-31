@@ -1,6 +1,19 @@
 document.addEventListener("DOMContentLoaded", () => {
   "use strict";
 
+  const chromeAPI =
+    typeof globalThis.chrome !== "undefined" ? globalThis.chrome : undefined;
+  const browserAPI =
+    typeof globalThis.browser !== "undefined" ? globalThis.browser : undefined;
+  const api = chromeAPI || browserAPI;
+
+  if (
+    typeof globalThis.chrome === "undefined" &&
+    typeof browserAPI !== "undefined"
+  ) {
+    globalThis.chrome = browserAPI;
+  }
+
   const els = {
     gradeBadge: document.getElementById("app-grade"),
     container: document.getElementById("points-container"),
@@ -16,6 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
     "about:",
     "https://chromewebstore.google.com",
     "https://chrome.google.com/webstore",
+    "moz-extension://",
   ];
   const LOCAL_PREFIX = "file://";
   let runId = 0;
@@ -45,7 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setLoading("Compiling structural runtime snapshots...");
 
     try {
-      const [tab] = await chrome.tabs.query({
+      const [tab] = await api.tabs.query({
         active: true,
         currentWindow: true,
       });
@@ -79,7 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       let cookiesList = [];
       try {
-        cookiesList = await chrome.cookies.getAll({ domain: urlObj.hostname });
+        cookiesList = await api.cookies.getAll({ domain: urlObj.hostname });
       } catch (cErr) {
         console.warn("Storage API permissions initialization bypass:", cErr);
       }
@@ -91,7 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
       domData.aiUrlFlags = aiUrlAnalysis.flags;
 
       try {
-        const scriptResults = await chrome.scripting.executeScript({
+        const scriptResults = await api.scripting.executeScript({
           target: { tabId: tab.id },
           func: () => {
             const html = document.documentElement?.innerHTML || "";
@@ -269,6 +283,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const radarCheck = await fetch(
           `https://raw.githubusercontent.com/duckduckgo/tracker-radar/main/domains/${domain}.json`,
+          { mode: "cors" },
         );
         if (radarCheck.ok) isTrackedNode = true;
       } catch (_) {}
