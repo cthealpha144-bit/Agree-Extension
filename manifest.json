@@ -1,13 +1,21 @@
 {
   "manifest_version": 3,
   "name": "Agree? - Safe Browsing Assistant",
-  "version": "5.5.0",
+  "version": "6.0.0",
   "description": "Scrapes and analyzes live pages for phishing and security risks.",
-  "permissions": ["activeTab", "scripting"],
-  "action": {
-    "default_popup": "popup.html"
-  },
+  "permissions": ["activeTab", "scripting", "cookies"],
+  "host_permissions": ["https://*/*", "http://*/*"],
   "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
     "128": "icon.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon.png",
+      "48": "icon.png",
+      "128": "icon.png"
+    }
   }
 }
